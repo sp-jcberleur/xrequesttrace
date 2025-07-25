@@ -1,0 +1,8 @@
+displayName: XRequestTrace Plugin
+type: middleware
+
+import: github.com/sp-jcberleur/xrequesttrace
+
+summary: '[XRequestTrace] Add X-Request-ID Header based on OpenTelemetry Trace ID'
+
+testData: {}
