@@ -41,7 +41,9 @@ var traceRegex, _ = regexp.Compile(`^\w{2}-(\w{32})-\w{16}-\w{2}$`)
 
 func (a *XRequestTrace) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
+	ctx := req.Context()
 	a.logger.Printf("headers received: %#v", req.Header)
+	a.logger.Printf("request context: %#v", ctx)
 	if xids := req.Header["X-Request-ID"]; len(xids) == 0 {
 		a.logger.Printf("X-Request-ID header not found")
 		if traceparents := req.Header["traceparent"]; len(traceparents) > 0 {
