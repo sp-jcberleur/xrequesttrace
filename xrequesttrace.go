@@ -3,11 +3,17 @@ package xrequesttrace
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"regexp"
+	"time"
 )
+
+var random = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // Config the plugin configuration.
 type Config struct {
@@ -41,9 +47,7 @@ var traceRegex, _ = regexp.Compile(`^\w{2}-(\w{32})-\w{16}-\w{2}$`)
 
 func (a *XRequestTrace) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
-	ctx := req.Context()
 	a.logger.Printf("headers received: %#v", req.Header)
-	a.logger.Printf("request context: %#v", ctx)
 	if xids := req.Header["X-Request-ID"]; len(xids) == 0 {
 		a.logger.Printf("X-Request-ID header not found")
 		if traceparents := req.Header["traceparent"]; len(traceparents) > 0 {
@@ -57,11 +61,25 @@ func (a *XRequestTrace) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				a.logger.Printf("traceparent header does not match expected format: %#v", traceparent)
 			}
 		} else {
-			a.logger.Printf("traceparent header not found %#v", traceparents)
+			traceid := generateRandomHex(32)
+			spanid := generateRandomHex(16)
+			a.logger.Printf("traceparent header not found, generating new traceid: %#v and spanid: %#v", traceid, spanid)
+			req.Header["X-Request-ID"] = []string{traceid}
+			req.Header["traceparent"] = []string{fmt.Sprintf("00-%s-%s-00", traceid, spanid)}
 		}
 	} else {
 		a.logger.Printf("X-Request-ID header already exists: %#v", xids)
 	}
 
 	a.next.ServeHTTP(rw, req)
+}
+
+func generateRandomHex(n int) string {
+	b := make([]byte, n/2)
+
+	if _, err := random.Read(b); err != nil {
+		panic(err)
+	}
+
+	return hex.EncodeToString(b)[:n]
 }

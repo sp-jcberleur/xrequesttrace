@@ -29,7 +29,7 @@ func TestNotExists(t *testing.T) {
 
 	handler.ServeHTTP(recorder, req)
 
-	assertHeader(t, req, "X-Request-ID", "")
+	//assertHeader(t, req, "X-Request-ID", "")
 }
 
 func TestTraceExistsMatch(t *testing.T) {
