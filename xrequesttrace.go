@@ -3,7 +3,9 @@ package xrequesttrace
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
 )
 
@@ -21,29 +23,41 @@ func CreateConfig() *Config {
 
 // XRequestTrace a XRequestTrace plugin.
 type XRequestTrace struct {
-	next http.Handler
-	name string
+	name   string
+	next   http.Handler
+	logger *log.Logger
 }
 
 // New created a new XRequestTrace plugin.
 func New(_ context.Context, next http.Handler, _ *Config, name string) (http.Handler, error) {
 	return &XRequestTrace{
-		next: next,
-		name: name,
+		name:   name,
+		next:   next,
+		logger: log.New(os.Stderr, "", log.LstdFlags),
 	}, nil
 }
 
 var traceRegex, _ = regexp.Compile(`^\w{2}-(\w{32})-\w{16}-\w{2}$`)
 
 func (a *XRequestTrace) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if xids, ok := req.Header["X-Request-ID"]; ok && len(xids) == 0 {
-		if traceparents, ok := req.Header["traceparent"]; ok && len(traceparents) > 0 {
+
+	if xids := req.Header["X-Request-ID"]; len(xids) == 0 {
+		a.logger.Printf("X-Request-ID header not found")
+		if traceparents := req.Header["traceparent"]; len(traceparents) > 0 {
 			traceparent := traceparents[0]
+			a.logger.Printf("traceparent header found: %#v", traceparent)
 			if match := traceRegex.MatchString(traceparent); match {
 				traceid := traceRegex.FindStringSubmatch(traceparent)[1]
-				req.Header.Set("X-Request-ID", traceid)
+				a.logger.Printf("traceid extracted: %#v", traceid)
+				req.Header["X-Request-ID"] = []string{traceid}
+			} else {
+				a.logger.Printf("traceparent header does not match expected format: %#v", traceparent)
 			}
+		} else {
+			a.logger.Printf("traceparent header not found %#v", traceparents)
 		}
+	} else {
+		a.logger.Printf("X-Request-ID header already exists: %#v", xids)
 	}
 
 	a.next.ServeHTTP(rw, req)
