@@ -1,4 +1,4 @@
-// Package xrequesttrace a demo plugin.
+// Package xrequesttrace a traefik plugin.
 package xrequesttrace
 
 import (
@@ -8,11 +8,15 @@ import (
 )
 
 // Config the plugin configuration.
-type Config struct{}
+type Config struct {
+	Dummy bool `json:"dummy,omitempty"`
+}
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
-	return &Config{}
+	return &Config{
+		Dummy: false,
+	}
 }
 
 // XRequestTrace a XRequestTrace plugin.
